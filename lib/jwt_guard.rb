@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "jwt_guard/version"
-
-module JwtGuard
-  class Error < StandardError; end
-  # Your code goes here...
-end
+require "jwt_guard/authenticator"
+require "jwt_guard/error"
+require "jwt_guard/version"

@@ -6,6 +6,7 @@ AllCops:
   NewCops: enable
   Exclude:
     - 'bin/*'
+    - 'vendor/**/*'
 
 Metrics/BlockLength:
   Max: 50

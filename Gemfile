@@ -9,6 +9,6 @@ gem "rake"
 
 gem "rspec"
 
-gem "rubocop"
-gem "rubocop-rake"
-gem "rubocop-rspec"
+gem "rubocop", require: false
+gem "rubocop-rake", require: false
+gem "rubocop-rspec", require: false

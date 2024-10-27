@@ -13,7 +13,7 @@ module JWTGuard
   #
   # @example Token validation
   #   rsa_private = OpenSSL::PKey::RSA.generate(2048)
-  #   rsa_public = rsa_private.public_key
+  #   rsa_public_key = rsa_private.public_key
   #
   #   payload = {
   #     :iat=>Time.now.to_i,
@@ -33,13 +33,13 @@ module JWTGuard
   #
   #   token = JWT.encode(payload, rsa_private, "RS256")
   #
-  #   auth = JWTGuard::Authenticator.new(rsa_public)
+  #   auth = JWTGuard::Authenticator.new(rsa_public_key)
   #   auth.authenticate!("Bearer #{token}")
   class Authenticator
     # Initializes the Authenticator with public and private keys.
     #
-    # @param public_key [OpenSSL::PKey::RSA] Public RSA key for token verification.
-    # @param private_key [OpenSSL::PKey::RSA, nil] Optional private RSA key for token encoding.
+    # @param public_key [OpenSSL::PKey::PKey] Public key for token verification.
+    # @param private_key [OpenSSL::PKey::PKey, nil] Optional private key for token encoding.
     def initialize(public_key, private_key = nil)
       @public_key = public_key
       @private_key = private_key
@@ -108,7 +108,7 @@ module JWTGuard
         iat_leeway: ENV["JWT_ISSUED_AT_LEEWAY"]&.to_i,
         exp_leeway: ENV["JWT_EXPIRATION_LEEWAY"]&.to_i,
         nbf_leeway: ENV["JWT_NOT_BEFORE_LEEWAY"]&.to_i
-      }.compact
+      }
     end
 
     # Parses the authorization token and separates the type and token value.

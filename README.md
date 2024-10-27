@@ -49,8 +49,6 @@ Initializing the Authenticator
 You can create an instance of the JWTGuard::Authenticator by providing a public and private key:
 
 ```ruby
-require 'jwt_guard'
-
 rsa_private = OpenSSL::PKey::RSA.generate(2048)
 authenticator = JWTGuard::Authenticator.new(rsa_private.public_key, rsa_private.private_key)
 ```
@@ -61,6 +59,7 @@ To encode a JWT with a payload, use the encode method:
 
 ```ruby
 payload = { uid: "123", role: "admin", jti: SecureRandom.uuid }
+
 token = authenticator.encode(payload)
 puts token
 ```
@@ -72,8 +71,9 @@ To authenticate a token, use the authenticate! method:
 ```ruby
 
 begin
-  decoded_payload = authenticator.authenticate!(token)
+  decoded_payload = authenticator.authenticate!("Bearer #{token}")
   puts decoded_payload
+
 rescue JWTGuard::Error => e
   puts e.message
 end
@@ -91,7 +91,7 @@ payload = {
   :sub => "session",
   :iss => "abc",
   :aud => ["xyz"],
-  :jti => "8c5ee641e29b94717b56",
+  :jti => SecureRandom.uuid,
   :email => "user@example.com",
   :uid => "ID0AC0308",
   :role => "admin",

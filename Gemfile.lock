@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    jwt_guard (0.1.0)
+    jwt_guard (1.0.0)
       jwt
 
 GEM

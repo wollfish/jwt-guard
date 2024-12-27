@@ -38,9 +38,9 @@ module JWTGuard
   class Authenticator
     # Initializes the Authenticator with public and private keys.
     #
-    # @param public_key [OpenSSL::PKey::PKey] Public key for token verification.
+    # @param public_key [OpenSSL::PKey::PKey, nil] Public key for token verification.
     # @param private_key [OpenSSL::PKey::PKey, nil] Optional private key for token encoding.
-    def initialize(public_key, private_key = nil)
+    def initialize(public_key: nil, private_key: nil)
       @public_key = public_key
       @private_key = private_key
       @verify_options = build_verify_options
@@ -125,6 +125,8 @@ module JWTGuard
     # @return [Hash] The decoded payload as a hash with symbolized keys.
     # @raise [JWTGuard::Error] If decoding or verification fails.
     def decode_and_verify_token(token_value)
+      raise ArgumentError, "No public key given." unless @public_key
+
       payload, _header = JWT.decode(token_value, @public_key, true, @verify_options)
 
       payload

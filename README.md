@@ -50,7 +50,7 @@ You can create an instance of the JWTGuard::Authenticator by providing a public 
 
 ```ruby
 rsa_private = OpenSSL::PKey::RSA.generate(2048)
-authenticator = JWTGuard::Authenticator.new(rsa_private.public_key, rsa_private.private_key)
+authenticator = JWTGuard::Authenticator.new(private_key: rsa_private.private_key, public_key: rsa_private.public_key)
 ```
 
 ### Encoding a Token
@@ -66,12 +66,11 @@ puts token
 
 ### Authenticating a Token
 
-To authenticate a token, use the authenticate! method:
+To authenticate a token, use decode! method:
 
 ```ruby
-
 begin
-  decoded_payload = authenticator.authenticate!("Bearer #{token}")
+  decoded_payload = authenticator.decode!(token)
   puts decoded_payload
 
 rescue JWTGuard::Error => e
@@ -103,8 +102,8 @@ payload = {
 
 token = JWT.encode(payload, rsa_private, "RS256")
 
-authenticator = JWTGuard::Authenticator.new(rsa_public_key)
-authenticator.authenticate!("Bearer #{token}")
+authenticator = JWTGuard::Authenticator.new(public_key: rsa_public_key)
+authenticator.decode!(token)
 ```
 
 ---

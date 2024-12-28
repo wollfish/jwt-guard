@@ -61,7 +61,7 @@ module JWTGuard
         iat: Time.now.to_i,
         iss: ENV.fetch("JWT_ISSUER", nil),
         jti: SecureRandom.hex(10),
-        sub: 'session'
+        sub: "session"
       }
 
       JWT.encode(encode_payload.merge(payload), @private_key, @encode_options[:algorithm])

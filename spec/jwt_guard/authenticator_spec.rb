@@ -25,8 +25,9 @@ RSpec.describe JWTGuard::Authenticator do
 
     context "with invalid token type" do
       it "raises an error" do
-        expect { authenticator.decode!("Invalid token") }
-          .to raise_error(JWTGuard::Error, "Authorization failed: JWT verification failed: Not enough or too many segments")
+        expect { authenticator.decode!("Invalid token") }.to(
+          raise_error(JWTGuard::Error, "Authorization failed: JWT verification failed: Not enough or too many segments")
+        )
       end
     end
 

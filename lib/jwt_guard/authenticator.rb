@@ -34,29 +34,17 @@ module JWTGuard
   #   token = JWT.encode(payload, rsa_private, "RS256")
   #
   #   auth = JWTGuard::Authenticator.new(rsa_public_key)
-  #   auth.authenticate!("Bearer #{token}")
+  #   auth.decode!(token)
   class Authenticator
     # Initializes the Authenticator with public and private keys.
     #
+    # @param private_key [OpenSSL::PKey::PKey, nil] Private key for token encoding.
     # @param public_key [OpenSSL::PKey::PKey, nil] Public key for token verification.
-    # @param private_key [OpenSSL::PKey::PKey, nil] Optional private key for token encoding.
-    def initialize(public_key: nil, private_key: nil)
+    def initialize(private_key: nil, public_key: nil)
       @public_key = public_key
       @private_key = private_key
       @verify_options = build_verify_options
       @encode_options = { algorithm: @verify_options[:algorithms].first }.compact
-    end
-
-    # Authenticates a token by decoding and verifying its payload.
-    #
-    # @param token [String] Bearer token in the format "Bearer <token_value>".
-    # @return [Hash] The decoded token payload as a hash with symbolized keys.
-    # @raise [JWTGuard::Error] If the token is invalid or verification fails.
-    def authenticate!(token)
-      token_type, token_value = parse_token(token)
-      raise JWTGuard::Error, "Invalid token type." unless token_type == "Bearer"
-
-      decode_and_verify_token(token_value)
     end
 
     # Encodes a payload as a JWT token using the private key.
@@ -64,10 +52,36 @@ module JWTGuard
     # @param payload [Hash] The payload to encode in the JWT.
     # @return [String] The encoded JWT token.
     # @raise [ArgumentError] If the private key is not provided.
-    def encode(payload)
+    def encode!(payload)
       raise ArgumentError, "No private key given." unless @private_key
 
-      JWT.encode(payload, @private_key, @encode_options[:algorithm])
+      encode_payload = {
+        aud: ENV["JWT_AUDIENCE"]&.split(",") || [],
+        exp: (Time.now + 60).to_i,
+        iat: Time.now.to_i,
+        iss: ENV.fetch("JWT_ISSUER", nil),
+        jti: SecureRandom.hex(10),
+        sub: 'session'
+      }
+
+      JWT.encode(encode_payload.merge(payload), @private_key, @encode_options[:algorithm])
+    end
+
+    # Decodes and verifies the JWT token value.
+    #
+    # @param token [String] The actual JWT token value to decode.
+    # @param option [Hash] The verification option used to decode.
+    #
+    # @return [Hash] The decoded payload as a hash with symbolized keys.
+    # @raise [JWTGuard::Error] If decoding or verification fails.
+    def decode!(token, option: {})
+      raise ArgumentError, "No public key given." unless @public_key
+
+      payload, _header = JWT.decode(token, @public_key, true, @verify_options.merge(option))
+
+      payload
+    rescue JWT::DecodeError => e
+      raise JWTGuard::Error, "JWT verification failed: #{e.message}"
     end
 
     private
@@ -109,29 +123,6 @@ module JWTGuard
         exp_leeway: ENV["JWT_EXPIRATION_LEEWAY"]&.to_i,
         nbf_leeway: ENV["JWT_NOT_BEFORE_LEEWAY"]&.to_i
       }
-    end
-
-    # Parses the authorization token and separates the type and token value.
-    #
-    # @param token [String] The full authorization token string.
-    # @return [Array<String>] An array with the token type and token value.
-    def parse_token(token)
-      token.to_s.split
-    end
-
-    # Decodes and verifies the JWT token value.
-    #
-    # @param token_value [String] The actual JWT token value to decode.
-    # @return [Hash] The decoded payload as a hash with symbolized keys.
-    # @raise [JWTGuard::Error] If decoding or verification fails.
-    def decode_and_verify_token(token_value)
-      raise ArgumentError, "No public key given." unless @public_key
-
-      payload, _header = JWT.decode(token_value, @public_key, true, @verify_options)
-
-      payload
-    rescue JWT::DecodeError => e
-      raise JWTGuard::Error, "JWT verification failed: #{e.message}"
     end
   end
 end

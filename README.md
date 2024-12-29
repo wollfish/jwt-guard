@@ -48,13 +48,13 @@ You can create an instance of the JWTGuard::Authenticator by providing a public 
 ```ruby
 rsa_private = OpenSSL::PKey::RSA.generate(2048)
 encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
-verify_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
+decode_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
 
 authenticator = JWTGuard::Authenticator.new(
   private_key: rsa_private.private_key,
   public_key: rsa_private.public_key,
   encode_options: encode_options,
-  verify_options: verify_options
+  decode_options: decode_options
 )
 ```
 
@@ -104,13 +104,13 @@ token = JWT.encode(
 )
 
 encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
-verify_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
+decode_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
 
 auth = JWTGuard::Authenticator.new(
   private_key: rsa_private.private_key,
   public_key: rsa_private.public_key,
   encode_options: encode_options,
-  verify_options: verify_options
+  decode_options: decode_options
 )
 
 auth.encode!(payload)

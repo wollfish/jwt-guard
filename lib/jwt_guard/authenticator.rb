@@ -29,13 +29,13 @@ module JWTGuard
   #   JWT.encode(default_payload.merge(payload), rsa_private, "RS256")
   #
   #   encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
-  #   verify_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
+  #   decode_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
   #
   #   auth = JWTGuard::Authenticator.new(
   #     private_key: rsa_private.private_key,
   #     public_key: rsa_private.public_key,
   #     encode_options: encode_options,
-  #     verify_options: verify_options
+  #     decode_options: decode_options
   #   )
   #
   #   auth.encode!(payload)
@@ -46,12 +46,12 @@ module JWTGuard
     # @param private_key [OpenSSL::PKey::PKey, nil] Private key for token encoding.
     # @param public_key [OpenSSL::PKey::PKey, nil] Public key for token verification.
     # @param encode_options [Hash] Encode Option.
-    # @param verify_options [Hash] Verify Option.
-    def initialize(private_key: nil, public_key: nil, encode_options: {}, verify_options: {})
+    # @param decode_options [Hash] Verify Option.
+    def initialize(private_key: nil, public_key: nil, encode_options: {}, decode_options: {})
       @public_key = public_key
       @private_key = private_key
-      @verify_options = { algorithms: ["RS256"] }.merge(build_verify_options).merge(verify_options)
       @encode_options = { algorithm: "RS256" }.merge(encode_options)
+      @decode_options = { algorithms: ["RS256"] }.merge(build_decode_options).merge(decode_options)
     end
 
     # Encodes a payload as a JWT token using the private key.
@@ -84,7 +84,7 @@ module JWTGuard
     def decode!(token, option: {})
       raise ArgumentError, "No public key given." unless @public_key
 
-      payload, _header = JWT.decode(token, @public_key, true, @verify_options.merge(option))
+      payload, _header = JWT.decode(token, @public_key, true, @decode_options.merge(option))
 
       payload
     rescue JWT::DecodeError => e
@@ -96,7 +96,7 @@ module JWTGuard
     # Builds complete JWT verification options by merging core and audience options.
     #
     # @return [Hash] The complete JWT verification options.
-    def build_verify_options
+    def build_decode_options
       {
         sub: "any",
         verify_aud: true,

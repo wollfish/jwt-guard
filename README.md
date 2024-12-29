@@ -31,9 +31,6 @@ gem install jwt_guard
 
 JWTGuard relies on several environment variables for configuration:
 
-- `JWT_ISSUER`: The issuer of the JWT.
-- `JWT_AUDIENCE`: The audience for the JWT (comma-separated if multiple).
-- `JWT_ALGORITHM`: The algorithm used for signing (default is RS256).
 - `JWT_DEFAULT_LEEWAY`: The default leeway for expiration validation (optional).
 - `JWT_ISSUED_AT_LEEWAY`: Leeway for issued-at time (optional).
 - `JWT_EXPIRATION_LEEWAY`: Leeway for expiration time (optional).
@@ -50,7 +47,15 @@ You can create an instance of the JWTGuard::Authenticator by providing a public 
 
 ```ruby
 rsa_private = OpenSSL::PKey::RSA.generate(2048)
-authenticator = JWTGuard::Authenticator.new(private_key: rsa_private.private_key, public_key: rsa_private.public_key)
+encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
+verify_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
+
+authenticator = JWTGuard::Authenticator.new(
+  private_key: rsa_private.private_key,
+  public_key: rsa_private.public_key,
+  encode_options: encode_options,
+  verify_options: verify_options
+)
 ```
 
 ### Encoding a Token
@@ -58,9 +63,9 @@ authenticator = JWTGuard::Authenticator.new(private_key: rsa_private.private_key
 To encode a JWT with a payload, use the encode method:
 
 ```ruby
-payload = { uid: "123", role: "admin", jti: SecureRandom.uuid }
+payload = { uid: "123", role: "admin", jti: SecureRandom.hex(10) }
 
-token = authenticator.encode(payload)
+token = authenticator.encode!(payload)
 puts token
 ```
 
@@ -82,28 +87,34 @@ end
 
 ```ruby
 rsa_private = OpenSSL::PKey::RSA.generate(2048)
-rsa_public_key = rsa_private.public_key
 
 payload = {
-  :iat => Time.now.to_i,
-  :exp => (Time.zone.now + 60).to_i,
-  :sub => "session",
-  :iss => "abc",
-  :aud => ["xyz"],
-  :jti => SecureRandom.uuid,
-  :email => "user@example.com",
-  :uid => "ID0AC0308",
-  :role => "admin",
-  :level => 6,
-  :state => "active",
-  :full_name => "Pa School teacher",
-  :country_code => "IND"
+  jti: SecureRandom.hex(10),
+  uid: "ID0AC0308",
+  email: "user@example.com",
+  role: "admin",
+  level: 6,
+  state: "active"
 }
 
-token = JWT.encode(payload, rsa_private, "RS256")
+token = JWT.encode(
+  payload.merge(iat: Time.now.to_i, exp: (Time.now + 60).to_i, sub: "any", iss: "abc", aud: ["xyz"]),
+  rsa_private,
+  "RS256"
+)
 
-authenticator = JWTGuard::Authenticator.new(public_key: rsa_public_key)
-authenticator.decode!(token)
+encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
+verify_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
+
+auth = JWTGuard::Authenticator.new(
+  private_key: rsa_private.private_key,
+  public_key: rsa_private.public_key,
+  encode_options: encode_options,
+  verify_options: verify_options
+)
+
+auth.encode!(payload)
+auth.decode!(token)
 ```
 
 ---

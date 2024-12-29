@@ -6,45 +6,52 @@ module JWTGuard
   # Authenticator handles user authentication using JWT tokens.
   #
   # Configurable through ENV variables:
-  # * JWT_ISSUER, JWT_AUDIENCE, JWT_ALGORITHM (default: RS256)
   # * JWT_DEFAULT_LEEWAY, JWT_ISSUED_AT_LEEWAY, JWT_EXPIRATION_LEEWAY, JWT_NOT_BEFORE_LEEWAY
   #
   # @see https://github.com/jwt/ruby-jwt for detailed validation options.
   #
   # @example Token validation
   #   rsa_private = OpenSSL::PKey::RSA.generate(2048)
-  #   rsa_public_key = rsa_private.public_key
   #
-  #   payload = {
-  #     :iat=>Time.now.to_i,
-  #     :exp=>(Time.zone.now + 60).to_i,
-  #     :sub=>"session",
-  #     :iss=>"abc",
-  #     :aud=>["xyz"],
-  #     :jti=>"8c5ee641e29b94717b56",
-  #     :email=>"user@example.com",
-  #     :uid=>"ID0AC0308",
-  #     :role=>"admin",
-  #     :level=>6,
-  #     :state=>"active",
-  #     :full_name=>"Pa School teacher",
-  #     :country_code=>"IND"
+  #   default_payload = {
+  #     aud: ["xyz"], exp: (Time.now + 60).to_i, iat: Time.now.to_i,
+  #     iss: "abc", jti: SecureRandom.hex(10), sub: "any"
   #   }
   #
-  #   token = JWT.encode(payload, rsa_private, "RS256")
+  #   payload = {
+  #     uid: "ID0AC0308",
+  #     email: "user@example.com",
+  #     role: "admin",
+  #     level: 6,
+  #     state: "active"
+  #   }
   #
-  #   auth = JWTGuard::Authenticator.new(rsa_public_key)
+  #   JWT.encode(default_payload.merge(payload), rsa_private, "RS256")
+  #
+  #   encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
+  #   verify_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
+  #
+  #   auth = JWTGuard::Authenticator.new(
+  #     private_key: rsa_private.private_key,
+  #     public_key: rsa_private.public_key,
+  #     encode_options: encode_options,
+  #     verify_options: verify_options
+  #   )
+  #
+  #   auth.encode!(payload)
   #   auth.decode!(token)
   class Authenticator
     # Initializes the Authenticator with public and private keys.
     #
     # @param private_key [OpenSSL::PKey::PKey, nil] Private key for token encoding.
     # @param public_key [OpenSSL::PKey::PKey, nil] Public key for token verification.
-    def initialize(private_key: nil, public_key: nil)
+    # @param encode_options [Hash] Encode Option.
+    # @param verify_options [Hash] Verify Option.
+    def initialize(private_key: nil, public_key: nil, encode_options: {}, verify_options: {})
       @public_key = public_key
       @private_key = private_key
-      @verify_options = build_verify_options
-      @encode_options = { algorithm: @verify_options[:algorithms].first }.compact
+      @verify_options = { algorithms: ["RS256"] }.merge(build_verify_options).merge(verify_options)
+      @encode_options = { algorithm: "RS256" }.merge(encode_options)
     end
 
     # Encodes a payload as a JWT token using the private key.
@@ -56,12 +63,12 @@ module JWTGuard
       raise ArgumentError, "No private key given." unless @private_key
 
       encode_payload = {
-        aud: ENV["JWT_AUDIENCE"]&.split(",") || [],
-        exp: (Time.now + 60).to_i,
+        aud: @encode_options.fetch(:aud, []),
+        exp: (Time.now + @encode_options.fetch(:exp, "60").to_i).to_i,
         iat: Time.now.to_i,
-        iss: ENV.fetch("JWT_ISSUER", nil),
+        iss: @encode_options[:iss],
         jti: SecureRandom.hex(10),
-        sub: "session"
+        sub: "any"
       }
 
       JWT.encode(encode_payload.merge(payload), @private_key, @encode_options[:algorithm])
@@ -91,26 +98,15 @@ module JWTGuard
     # @return [Hash] The complete JWT verification options.
     def build_verify_options
       {
-        algorithms: [ENV.fetch("JWT_ALGORITHM", "RS256")],
-        aud: ENV["JWT_AUDIENCE"]&.split(",") || [],
-        iss: ENV.fetch("JWT_ISSUER", nil),
-        sub: "session"
-      }.merge(core_verify_options).merge(leeway_options).compact
-    end
-
-    # Builds JWT verification options from environment variables.
-    #
-    # @return [Hash] The core JWT verification options.
-    def core_verify_options
-      {
-        verify_aud: !ENV["JWT_AUDIENCE"].nil? && !ENV["JWT_AUDIENCE"].empty?,
+        sub: "any",
+        verify_aud: true,
         verify_expiration: true,
         verify_iat: true,
-        verify_iss: !ENV["JWT_ISSUER"].nil? && !ENV["JWT_ISSUER"].empty?,
+        verify_iss: true,
         verify_jti: true,
         verify_not_before: true,
         verify_sub: true
-      }
+      }.merge(leeway_options).compact
     end
 
     # Constructs leeway options from environment variables.

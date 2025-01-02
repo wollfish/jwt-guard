@@ -51,7 +51,7 @@ module JWTGuard
       @public_key = public_key
       @private_key = private_key
       @encode_options = { algorithm: "RS256" }.merge(encode_options)
-      @decode_options = { algorithms: ["RS256"] }.merge(build_decode_options).merge(decode_options)
+      @decode_options = { algorithms: ["RS256"], sub: "any" }.merge(build_decode_options).merge(decode_options)
     end
 
     # Encodes a payload as a JWT token using the private key.
@@ -68,7 +68,7 @@ module JWTGuard
         iat: Time.now.to_i,
         iss: @encode_options[:iss],
         jti: SecureRandom.hex(10),
-        sub: "any"
+        sub: @encode_options.fetch(:sub, "any")
       }
 
       JWT.encode(encode_payload.merge(payload), @private_key, @encode_options[:algorithm])
@@ -98,7 +98,6 @@ module JWTGuard
     # @return [Hash] The complete JWT verification options.
     def build_decode_options
       {
-        sub: "any",
         verify_aud: true,
         verify_expiration: true,
         verify_iat: true,

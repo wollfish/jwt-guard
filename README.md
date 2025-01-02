@@ -1,34 +1,148 @@
-# JwtGuard
+# JWTGuard
 
-TODO: Delete this and the text below, and describe your gem
+JWTGuard is a Ruby gem for handling user authentication using JSON Web Tokens (JWT). It provides a simple interface for
+encoding and decoding JWTs with built-in validation options to ensure secure authentication.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/jwt_guard`. To experiment with that code, run `bin/console` for an interactive prompt.
+---
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add this line to your application's Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
+```ruby
+gem 'jwt_guard'
+```
 
-    $ bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+Then, execute:
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+```shell
+bundle install
+```
 
-    $ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+Or install it yourself as:
+
+```shell
+gem install jwt_guard
+```
+
+---
+
+## Configuration
+
+JWTGuard relies on several environment variables for configuration:
+
+- `JWT_DEFAULT_LEEWAY`: The default leeway for expiration validation (optional).
+- `JWT_ISSUED_AT_LEEWAY`: Leeway for issued-at time (optional).
+- `JWT_EXPIRATION_LEEWAY`: Leeway for expiration time (optional).
+- `JWT_NOT_BEFORE_LEEWAY`: Leeway for not-before time (optional).
+
+Make sure to set these environment variables in your application.
+
+---
 
 ## Usage
 
-TODO: Write usage instructions here
+Initializing the Authenticator
+You can create an instance of the JWTGuard::Authenticator by providing a public and private key:
 
-## Development
+```ruby
+rsa_private = OpenSSL::PKey::RSA.generate(2048)
+encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
+decode_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+authenticator = JWTGuard::Authenticator.new(
+  private_key: rsa_private.private_key,
+  public_key: rsa_private.public_key,
+  encode_options: encode_options,
+  decode_options: decode_options
+)
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+### Encoding a Token
+
+To encode a JWT with a payload, use the encode method:
+
+```ruby
+payload = { uid: "123", role: "admin", jti: SecureRandom.hex(10) }
+
+token = authenticator.encode!(payload)
+puts token
+```
+
+### Authenticating a Token
+
+To authenticate a token, use decode! method:
+
+```ruby
+begin
+  decoded_payload = authenticator.decode!(token)
+  puts decoded_payload
+
+rescue JWTGuard::Error => e
+  puts e.message
+end
+```
+
+### Example Token validation
+
+```ruby
+rsa_private = OpenSSL::PKey::RSA.generate(2048)
+
+payload = {
+  jti: SecureRandom.hex(10),
+  uid: "ID0AC0308",
+  email: "user@example.com",
+  role: "admin",
+  level: 6,
+  state: "active"
+}
+
+token = JWT.encode(
+  payload.merge(iat: Time.now.to_i, exp: (Time.now + 60).to_i, sub: "any", iss: "abc", aud: ["xyz"]),
+  rsa_private,
+  "RS256"
+)
+
+encode_options = { algorithm: "RS256", aud: %w[pqr xyz], exp: "60", iss: "abc" }
+decode_options = { algorithms: %w[RS256 RS384 RS512], aud: %w[pqr xyz], iss: "abc" }
+
+auth = JWTGuard::Authenticator.new(
+  private_key: rsa_private.private_key,
+  public_key: rsa_private.public_key,
+  encode_options: encode_options,
+  decode_options: decode_options
+)
+
+auth.encode!(payload)
+auth.decode!(token)
+```
+
+---
+
+## Error Handling
+
+JWTGuard raises specific errors for different failure scenarios:
+
+- `JWTGuard::Error`: General error for authorization failures. `OR` Raised when decoding fails due to invalid tokens.
+
+---
+
+## Testing
+
+To ensure that your installation works correctly, you can run the RSpec tests included with the gem. If RSpec is set up
+in your project, run:
+
+```shell
+rspec
+```
+
+---
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/jwt_guard.
+Bug reports and pull requests are welcome on GitHub at https://github.com/wollfish/jwt-guard.
+
+---
 
 ## License
 
